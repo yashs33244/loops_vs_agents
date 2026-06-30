@@ -1,0 +1,56 @@
+// Graph Harness - the 10-node bug-fix DAG, exactly as engine/examples/bugfix.json
+// defines it. Node fill = final state from a real run of `sgh run`.
+//   executed = blue,  skipped = grey/dashed (fix_B, the any_of loser).
+// Rendered with Graphviz dot (automatic layered layout - no manual positioning).
+digraph bugfix {
+  rankdir = LR;
+  bgcolor = "white";
+  labelloc = "t";
+  fontname = "Helvetica";
+  label = <<FONT POINT-SIZE="22"><B>The engine runs the paper's 10-node bug-fix DAG to completion</B></FONT><BR/><BR/><FONT POINT-SIZE="12" COLOR="#5A6472">First-party output of  sgh run examples/bugfix.json  -  30 transition events, 10 rounds, peak parallelism 3, single-writer event loop (-race clean)</FONT><BR/> >;
+
+  nodesep = 0.40;
+  ranksep = 0.85;
+
+  node [shape=box, style="rounded,filled", fontname="Helvetica",
+        fontsize=13, penwidth=1.8, margin="0.22,0.13",
+        fillcolor="#E4F1F7", color="#2E86AB", fontcolor="#1A1D23"];
+  edge [color="#5A6472", penwidth=1.3, arrowsize=0.85];
+
+  // --- nodes (executed unless noted) ---
+  search_auth;
+  search_utils;
+  read_auth;
+  read_utils;
+  analyze;
+  fix_A;
+  update_docs;
+  run_tests   [label=<run_tests<BR/><FONT POINT-SIZE="9" COLOR="#5A6472">any_of join</FONT>>];
+  report      [label=<report<BR/><FONT POINT-SIZE="9" COLOR="#5A6472">all_of join</FONT>>];
+  fix_B       [label=<fix_B<BR/><FONT POINT-SIZE="9" COLOR="#7A8493">skipped<BR/>(any_of loser)</FONT>>,
+               fillcolor="#EEF1F5", color="#AEB6C2", fontcolor="#5A6472",
+               style="rounded,filled,dashed"];
+
+  // keep the three parallel nodes visually grouped as the peak-concurrency layer
+  subgraph cluster_par {
+    style = "dashed,rounded";
+    color = "#E9A12E";
+    penwidth = 1.6;
+    labelloc = "t";
+    label = <<FONT COLOR="#9A6B00" POINT-SIZE="11"><B>peak parallelism: 3 nodes dispatched together</B></FONT>>;
+    fix_A; update_docs; fix_B;
+  }
+
+  // --- edges (from bugfix.json) ---
+  search_auth  -> read_auth;
+  search_utils -> read_utils;
+  read_auth    -> analyze;
+  read_utils   -> analyze;
+  analyze      -> fix_A;
+  analyze      -> fix_B;
+  analyze      -> update_docs;
+  fix_A        -> run_tests;
+  fix_B        -> run_tests  [style=dashed, color="#AEB6C2"];
+  run_tests    -> report;
+  update_docs  -> report;
+}
