@@ -1,0 +1,15 @@
+{
+  "id": "bugfix-placeholder",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "root",
+      "action_ref": "mock",
+      "join": "all_of",
+      "side_effect": "none",
+      "retry_budget": 0,
+      "timeout_ms": 0
+    }
+  ],
+  "edges": []
+}
