@@ -1,0 +1,23 @@
+digraph graph_arm {
+  rankdir=TB; bgcolor="white"; pad=0.3; nodesep=0.6; ranksep=0.7;
+  labelloc="t"; fontname="Helvetica-Bold"; fontsize=16;
+  label="GRAPH ARM  -  planned DAG of sub-agents\l113s   146.9k tokens   4 agents   ->  20 passed in 2.20s\l";
+  node [shape=box style="rounded,filled" fontname="Helvetica" fontsize=11 margin="0.2,0.12"];
+  edge [color="#475569" arrowsize=0.9];
+  planner [label="PLANNER\n(read-only)\nemits fix DAG" fillcolor="#A7F3D0" color="#19A979"];
+  chat_history_source [label="FIX: chat-history-source\napp/api/v1/chat.py\nget_chat_history reads chat_history/extracted..." fillcolor="#19A979" fontcolor="white" color="#0F766E"];
+  planner -> chat_history_source;
+  finalize_session_arity [label="FIX: finalize-session-arity\napp/api/v1/campaigns.py\nfinalize_session handler passes user.id but C..." fillcolor="#19A979" fontcolor="white" color="#0F766E"];
+  planner -> finalize_session_arity;
+  {rank=same; chat_history_source; finalize_session_arity;}
+  verify [label="VERIFY checkpoint\nall_of join (waits for both)\nrun pytest -> 20 passed in 2.20s" fillcolor="#34D399" color="#0F766E"];
+  chat_history_source -> verify;
+  finalize_session_arity -> verify;
+  node [shape=plaintext style="" fillcolor="white" fontcolor="#64748B" fontsize=10];
+  u1 [label="|U| = 1"]; u2 [label="|U| = 2  (parallel)"]; u3 [label="|U| = 1"];
+  edge [style=invis];
+  u1 -> u2 -> u3;
+  {rank=same; planner; u1}
+  {rank=same; chat_history_source; u2}
+  {rank=same; verify; u3}
+}

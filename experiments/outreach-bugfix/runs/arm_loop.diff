@@ -1,0 +1,40 @@
+diff --git a/app/api/v1/chat.py b/app/api/v1/chat.py
+index 551b5cf..4de9395 100644
+--- a/app/api/v1/chat.py
++++ b/app/api/v1/chat.py
+@@ -50,11 +50,14 @@ async def get_chat_history(
+     campaign = await campaign_repo.get_by_id_for_user(campaign_id, user.id)
+     if not campaign:
+         raise HTTPException(status_code=404, detail="Campaign not found")
++    session = await campaign_repo.get_session(campaign_id)
++    if not session:
++        raise HTTPException(status_code=404, detail="Session not found")
+     return {
+         "campaign_id": campaign.id,
+-        "status": campaign.status,
+-        "chat_history": campaign.chat_history,
+-        "extracted_params": campaign.extracted_params,
++        "status": session.status,
++        "chat_history": session.chat_history,
++        "extracted_params": session.extracted_params,
+     }
+ 
+ 
+diff --git a/app/services/chat_service.py b/app/services/chat_service.py
+index cdaad3b..e3342d6 100644
+--- a/app/services/chat_service.py
++++ b/app/services/chat_service.py
+@@ -97,8 +97,12 @@ class ChatService:
+         return session
+ 
+     async def finalize_session(
+-        self, campaign_id: UUID, extracted_params: dict
++        self, campaign_id: UUID, extracted_params: dict, user_id: UUID | None = None
+     ) -> CampaignSession:
++        if user_id is not None:
++            campaign = await self.campaign_repo.get_by_id_for_user(campaign_id, user_id)
++            if not campaign:
++                raise NotFoundError(f"Campaign {campaign_id} not found")
+         session = await self.campaign_repo.get_session(campaign_id)
+         if not session:
+             raise NotFoundError(f"Session for campaign {campaign_id} not found")

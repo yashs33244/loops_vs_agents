@@ -1,0 +1,6 @@
+baseline recorded 2026-06-30T09:11:11Z
+command: python -m pytest -q
+result: 2 failed, 18 passed
+bug1: app/api/v1/campaigns.py:141 finalize_session arg count -> TypeError (test_finalize_session_accepts_params)
+bug2: app/api/v1/chat.py:56-57 reads chat_history/extracted_params off Campaign not CampaignSession -> AttributeError (test_get_chat_history_has_initial_message)
+ground-truth: 20 passed, 0 failed, no new failures

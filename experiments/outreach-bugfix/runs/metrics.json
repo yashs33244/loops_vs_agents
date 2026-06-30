@@ -1,0 +1,34 @@
+{
+  "task": "fix 2 backend bugs in outreach-proj chat module",
+  "ground_truth": "pytest -> 20 passed, 0 failed",
+  "baseline": "2 failed, 18 passed",
+  "model": "Claude (Claude Code sub-agents)",
+  "arms": {
+    "loop": {
+      "success": true,
+      "wall_s": 75.13,
+      "agents": 1,
+      "steps": 11,
+      "tool_uses": 18,
+      "tokens": 48287,
+      "max_parallel": 1,
+      "files_changed": 2,
+      "lines_added": 11,
+      "lines_removed": 4,
+      "recovered": false
+    },
+    "graph": {
+      "success": true,
+      "wall_s": 112.65,
+      "agents": 4,
+      "steps": 2,
+      "tool_uses": 29,
+      "tokens": 146940,
+      "max_parallel": 2,
+      "files_changed": 2,
+      "lines_added": 4,
+      "lines_removed": 3,
+      "recovered": false
+    }
+  }
+}

@@ -12,3 +12,8 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+
+# bug-fix experiment sandbox: copied outreach-proj source + git worktrees
+# (separate nested repo; we keep only the artifacts: runs/, plots/, diagrams/, *.md, *.py)
+experiments/outreach-bugfix/baseline/
+experiments/outreach-bugfix/arms/

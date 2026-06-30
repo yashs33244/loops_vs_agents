@@ -1,0 +1,32 @@
+digraph loop {
+  rankdir=TB; bgcolor="white"; pad=0.3;
+  labelloc="t"; fontname="Helvetica-Bold"; fontsize=16;
+  label="LOOP ARM  -  single agent, |U|=1 at every step\l75s   48.3k tokens   18 tool calls   ->  20 passed in 2.24s\l";
+  node [shape=box style="rounded,filled" fontname="Helvetica" fontsize=11 margin="0.18,0.10" color="#94A3B8"];
+  edge [color="#64748B" arrowsize=0.8];
+  s1 [label="1. run_tests\nRan full suite to see the 2 failures\n[2 failed, 18 passed in 2.55s]" fillcolor="#CBD5E1"];
+  s2 [label="2. run_tests\ntests/test_chat.py\nRan chat tests to isolate errors\n[2 failed]" fillcolor="#CBD5E1"];
+  s1 -> s2;
+  s3 [label="3. run_tests\ntests/test_chat.py\nGot AttributeError detail for chat hist...\n[1 failed]" fillcolor="#CBD5E1"];
+  s2 -> s3;
+  s4 [label="4. read\napp/services/chat_service.py\nRead ChatService - finalize_session has..." fillcolor="#BFDBFE"];
+  s3 -> s4;
+  s5 [label="5. read\ntests/test_chat.py\nRead the two failing tests' expectations" fillcolor="#BFDBFE"];
+  s4 -> s5;
+  s6 [label="6. read\napp/api/v1/chat.py\nget_chat_history reads campaign.chat_hi..." fillcolor="#BFDBFE"];
+  s5 -> s6;
+  s7 [label="7. read\napp/models/campaign_session.py\nConfirmed chat_history/extracted_params..." fillcolor="#BFDBFE"];
+  s6 -> s7;
+  s8 [label="8. think\nBug1: finalize_session missing user_id ..." fillcolor="#FDE68A"];
+  s7 -> s8;
+  s9 [label="9. edit\napp/api/v1/chat.py\nFetch session and return session.chat_h..." fillcolor="#FDBA74"];
+  s8 -> s9;
+  s10 [label="10. edit\napp/services/chat_service.py\nAdd user_id param to finalize_session w..." fillcolor="#FDBA74"];
+  s9 -> s10;
+  s11 [label="11. run_tests\nRan full suite - all green\n[20 passed in 2.24s]" fillcolor="#CBD5E1"];
+  s10 -> s11;
+  subgraph cluster_agent {
+    style="rounded"; color="#E8743B"; penwidth=2; label="1 agent (ReAct loop)"; fontcolor="#E8743B"; fontname="Helvetica-Bold";
+    s1; s2; s3; s4; s5; s6; s7; s8; s9; s10; s11;
+  }
+}
