@@ -1,0 +1,72 @@
+{
+  "model": "gemini-3.1-flash-lite",
+  "naive": {
+    "mode": "naive",
+    "llm_calls": 4,
+    "input_tokens": 18935,
+    "output_tokens": 3681,
+    "total_tokens": 22616,
+    "wall_s": 33.5,
+    "pytest_start": "7f/18p",
+    "pytest_end": "2f/23p",
+    "hardening_fixed": 5,
+    "per_call": [
+      {
+        "label": "fix:schema_validation",
+        "in": 4182,
+        "out": 94,
+        "total": 4276
+      },
+      {
+        "label": "fix:chat_idor",
+        "in": 5432,
+        "out": 1511,
+        "total": 6943
+      },
+      {
+        "label": "fix:campaigns_pagination",
+        "in": 5920,
+        "out": 1978,
+        "total": 7898
+      },
+      {
+        "label": "verify:llm",
+        "in": 3401,
+        "out": 98,
+        "total": 3499
+      }
+    ]
+  },
+  "optimized": {
+    "mode": "optimized",
+    "llm_calls": 3,
+    "input_tokens": 4137,
+    "output_tokens": 3506,
+    "total_tokens": 7643,
+    "wall_s": 25.4,
+    "pytest_start": "7f/18p",
+    "pytest_end": "6f/19p",
+    "hardening_fixed": 1,
+    "per_call": [
+      {
+        "label": "fix:schema_validation",
+        "in": 383,
+        "out": 89,
+        "total": 472
+      },
+      {
+        "label": "fix:chat_idor",
+        "in": 1582,
+        "out": 1453,
+        "total": 3035
+      },
+      {
+        "label": "fix:campaigns_pagination",
+        "in": 2172,
+        "out": 1964,
+        "total": 4136
+      }
+    ]
+  },
+  "token_reduction_pct": 66.2
+}
