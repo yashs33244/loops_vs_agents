@@ -83,8 +83,9 @@ Ran via `spike/` (4 concurrent calls/provider + a cancellation test; raw data in
 
 - **Claude CLI: GO.** 4/4 strict JSON, all clean + correct (answer 42), exit 0, ~4.5-7.7s/call. Concurrency clean; a long call was terminated in ~2s by context-timeout process-group kill.
 - **Gemini CLI: BLOCKED.** 4/4 failed with `exit 55 - IneligibleTierError: This client is no longer supported for Gemini Code Assist for individuals ... migrate to Antigravity`. The installed Gemini CLI cannot authenticate on the current tier.
+- **Gemini API (`gemini-3.1-flash-lite`): GO.** Re-tested via the HTTP `generateContent` endpoint (key in `GEMINI_API_KEY` env, never committed): 5/5 strict JSON via `responseMimeType=application/json`, ~0.8-1.4s/call (faster than the Claude CLI), exact token counts (~56/call), cancellation works. The `gemini-api` provider is in `spike/`.
 
-**Consequence:** the v1 **Claude-only** core is unblocked - proceed to M0. The **multi-model sweep (v2) needs a working second provider**: re-auth/migrate the Gemini CLI, add a raw Gemini/OpenAI API key, or pick a different second model. Flagged for v2; not a v1 blocker.
+**Consequence:** v1 **Claude-only** core is unblocked - proceed to M0. The **multi-model sweep (v2) is also unblocked**: the comparison is **Claude (CLI) vs Gemini 3.1 Flash Lite (API)**. Use the Gemini **API** path (the CLI is dead); key only via `GEMINI_API_KEY` env, never in source. Bonus: the API returns exact token counts, upgrading the eval's cost metric from best-effort to exact on the Gemini side. **Provider abstraction must therefore support both CLI (subprocess) and HTTP (API) backends** - already prototyped in the spike.
 
 ---
 
