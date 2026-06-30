@@ -1,15 +1,15 @@
 package wal
 
 import (
+	"bufio"
 	"encoding/json"
-	"errors"
+	"fmt"
+	"os"
+	"sort"
+	"sync"
 
 	"sgh/engine/plan"
 )
-
-// errNotImplemented is the placeholder error returned by skeleton methods that
-// must compile and return a value instead of panicking.
-var errNotImplemented = errors.New("not implemented")
 
 // Entry is one append-only WAL record: a single node state transition plus
 // metadata. One Entry is written per line in the JSONL log.
@@ -28,40 +28,123 @@ type Log interface {
 	Close() error
 }
 
-// FileLog is the durable, append-only JSONL implementation of Log.
-//
-// STUB: file handle/config fields are filled in by the implementer.
+// FileLog is the durable, append-only JSONL implementation of Log. Each Append
+// marshals one Entry to a single line and appends it to the file (decision D3).
+// Replay reads the whole file back and is tolerant of a torn/partial final line
+// left behind by a crash mid-write.
 type FileLog struct {
 	// Path is the on-disk JSONL file path.
 	Path string
+
+	// mu guards the file handle. The scheduler is a single-writer loop, but we
+	// still guard the handle so concurrent Append/Replay/Close calls cannot
+	// race on the *os.File (and so tests pass under -race).
+	mu sync.Mutex
+	f  *os.File
 }
 
-// NewFileLog opens (or creates) an append-only JSONL log at path.
-//
-// STUB: not implemented yet.
+// NewFileLog opens (or creates) an append-only JSONL log at path. The file is
+// opened O_APPEND so every write lands at the end, and created with mode 0o644
+// if it does not yet exist.
 func NewFileLog(path string) (*FileLog, error) {
-	return nil, errNotImplemented
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+	if err != nil {
+		return nil, fmt.Errorf("wal: open %q: %w", path, err)
+	}
+	return &FileLog{Path: path, f: f}, nil
 }
 
-// Append writes e as one JSON line.
-//
-// STUB: not implemented yet.
-func (f *FileLog) Append(e Entry) error { return errNotImplemented }
+// Append writes e as one JSON line (the record followed by a newline). It is
+// safe for the single-writer caller: the file handle is guarded by mu.
+func (f *FileLog) Append(e Entry) error {
+	b, err := json.Marshal(e)
+	if err != nil {
+		return fmt.Errorf("wal: marshal entry: %w", err)
+	}
+	b = append(b, '\n')
 
-// Replay reads back all entries for runID in write order.
-//
-// STUB: not implemented yet.
-func (f *FileLog) Replay(runID string) ([]Entry, error) { return nil, errNotImplemented }
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.f == nil {
+		return fmt.Errorf("wal: append to closed log %q", f.Path)
+	}
+	if _, err := f.f.Write(b); err != nil {
+		return fmt.Errorf("wal: write entry: %w", err)
+	}
+	return nil
+}
 
-// Close flushes and closes the underlying file.
-//
-// STUB: not implemented yet.
-func (f *FileLog) Close() error { return errNotImplemented }
+// Replay reads every line of the log, unmarshals each one, and returns the
+// entries whose RunID matches runID, ordered by Seq. A trailing line that fails
+// to unmarshal (a torn final write from a crash) is skipped rather than
+// surfaced as an error; any non-final line that fails to parse is a real
+// corruption and is reported.
+func (f *FileLog) Replay(runID string) ([]Entry, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	rf, err := os.Open(f.Path)
+	if err != nil {
+		return nil, fmt.Errorf("wal: open for replay %q: %w", f.Path, err)
+	}
+	defer rf.Close()
+
+	// Collect raw lines first so we can tell which parse failure is the
+	// (tolerable) trailing torn line versus a (fatal) interior corruption.
+	var lines [][]byte
+	sc := bufio.NewScanner(rf)
+	// Allow long payload lines (default token limit is 64 KiB).
+	sc.Buffer(make([]byte, 0, 64*1024), 16*1024*1024)
+	for sc.Scan() {
+		// Copy: Scanner reuses its buffer between Scan calls.
+		line := append([]byte(nil), sc.Bytes()...)
+		lines = append(lines, line)
+	}
+	if err := sc.Err(); err != nil {
+		return nil, fmt.Errorf("wal: scan %q: %w", f.Path, err)
+	}
+
+	var out []Entry
+	for i, line := range lines {
+		if len(line) == 0 {
+			continue // skip blank lines
+		}
+		var e Entry
+		if err := json.Unmarshal(line, &e); err != nil {
+			// Tolerate only a torn final line (last non-empty record).
+			if i == len(lines)-1 {
+				break
+			}
+			return nil, fmt.Errorf("wal: corrupt entry at line %d in %q: %w", i+1, f.Path, err)
+		}
+		if e.RunID == runID {
+			out = append(out, e)
+		}
+	}
+
+	sort.SliceStable(out, func(i, j int) bool { return out[i].Seq < out[j].Seq })
+	return out, nil
+}
+
+// Close closes the underlying file handle. It is idempotent: closing an already
+// closed log is a no-op.
+func (f *FileLog) Close() error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.f == nil {
+		return nil
+	}
+	err := f.f.Close()
+	f.f = nil
+	if err != nil {
+		return fmt.Errorf("wal: close %q: %w", f.Path, err)
+	}
+	return nil
+}
 
 // MemLog is an in-memory implementation of Log for tests.
-//
-// STUB: backing storage fields are filled in by the implementer.
 type MemLog struct {
+	mu sync.Mutex
 	// entries holds appended records in write order.
 	entries []Entry
 }
@@ -70,19 +153,29 @@ type MemLog struct {
 func NewMemLog() *MemLog { return &MemLog{} }
 
 // Append records e in memory.
-//
-// STUB: not implemented yet.
-func (m *MemLog) Append(e Entry) error { return errNotImplemented }
+func (m *MemLog) Append(e Entry) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.entries = append(m.entries, e)
+	return nil
+}
 
-// Replay returns all in-memory entries for runID in write order.
-//
-// STUB: not implemented yet.
-func (m *MemLog) Replay(runID string) ([]Entry, error) { return nil, errNotImplemented }
+// Replay returns all in-memory entries for runID, ordered by Seq.
+func (m *MemLog) Replay(runID string) ([]Entry, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	var out []Entry
+	for _, e := range m.entries {
+		if e.RunID == runID {
+			out = append(out, e)
+		}
+	}
+	sort.SliceStable(out, func(i, j int) bool { return out[i].Seq < out[j].Seq })
+	return out, nil
+}
 
 // Close is a no-op for the in-memory log.
-//
-// STUB: not implemented yet.
-func (m *MemLog) Close() error { return errNotImplemented }
+func (m *MemLog) Close() error { return nil }
 
 // Compile-time checks that each log satisfies the interface.
 var (
