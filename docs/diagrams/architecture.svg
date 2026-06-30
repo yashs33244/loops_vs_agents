@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 540" font-family="ui-sans-serif, -apple-system, Segoe UI, Roboto, sans-serif">
+  <defs>
+    <marker id="ara" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 z" fill="#6B7280"/>
+    </marker>
+  </defs>
+  <style>
+    .t{font-size:19px;font-weight:700;fill:#111827}
+    .h{font-size:14px;font-weight:700;fill:#111827}
+    .l{font-size:11.5px;fill:#374151}
+    .s{font-size:10.5px;fill:#6B7280}
+    .edge{stroke:#6B7280;stroke-width:1.8;fill:none}
+  </style>
+
+  <text x="30" y="30" class="t">What we are building (the engine, in boxes)</text>
+
+  <!-- task -->
+  <rect x="350" y="48" width="220" height="34" rx="8" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.4"/>
+  <text x="460" y="70" class="l" text-anchor="middle">task in plain English</text>
+
+  <!-- planner -->
+  <rect x="350" y="100" width="220" height="50" rx="10" fill="#EEF2FF" stroke="#4F46E5" stroke-width="1.6"/>
+  <text x="460" y="121" class="h" text-anchor="middle">Planner</text>
+  <text x="460" y="139" class="s" text-anchor="middle">turns the task into a graph of steps</text>
+
+  <!-- validator -->
+  <rect x="350" y="168" width="220" height="50" rx="10" fill="#EEF2FF" stroke="#4F46E5" stroke-width="1.6"/>
+  <text x="460" y="189" class="h" text-anchor="middle">Validator</text>
+  <text x="460" y="207" class="s" text-anchor="middle">5 safety checks (no cycles, no dangling steps...)</text>
+
+  <!-- runtime (center) -->
+  <rect x="330" y="256" width="260" height="150" rx="12" fill="#ECFDF5" stroke="#059669" stroke-width="2"/>
+  <text x="460" y="280" class="h" text-anchor="middle">Runtime - the scheduler</text>
+  <text x="346" y="304" class="l">- works out which steps are ready</text>
+  <text x="346" y="324" class="l">- runs the ready ones in parallel</text>
+  <text x="346" y="344" class="l">- tracks each step's state</text>
+  <text x="346" y="364" class="l">- throttles calls so we don't get</text>
+  <text x="346" y="380" class="l">  rate-limited</text>
+
+  <!-- node runners (left) -->
+  <rect x="40" y="256" width="250" height="150" rx="12" fill="#FFF7ED" stroke="#EA580C" stroke-width="1.6"/>
+  <text x="60" y="280" class="h">Node runners</text>
+  <text x="56" y="304" class="l">a step can be:</text>
+  <text x="56" y="324" class="l">- mock (fake, for tests)</text>
+  <text x="56" y="344" class="l">- tool (read a file, run a command)</text>
+  <text x="56" y="364" class="l">- LLM call:</text>
+  <text x="72" y="382" class="s">Claude CLI  /  Gemini 3.1 Flash-Lite API</text>
+
+  <!-- persistence (right) -->
+  <rect x="630" y="256" width="250" height="150" rx="12" fill="#EEF2FF" stroke="#4F46E5" stroke-width="1.6"/>
+  <text x="650" y="280" class="h">Persistence</text>
+  <text x="646" y="304" class="l">writes down every state change</text>
+  <text x="646" y="324" class="l">(an event log) so a run can be:</text>
+  <text x="646" y="344" class="l">- replayed after a crash</text>
+  <text x="646" y="364" class="l">- audited step-by-step later</text>
+
+  <!-- recovery (below) -->
+  <rect x="330" y="446" width="260" height="56" rx="10" fill="#FEF2F2" stroke="#DC2626" stroke-width="1.6"/>
+  <text x="460" y="469" class="h" text-anchor="middle">Recovery</text>
+  <text x="460" y="488" class="s" text-anchor="middle">on failure: retry -&gt; patch -&gt; new plan (in that order)</text>
+
+  <!-- eval (top right) -->
+  <rect x="630" y="48" width="250" height="170" rx="12" fill="#F9FAFB" stroke="#9CA3AF" stroke-width="1.4" stroke-dasharray="5 4"/>
+  <text x="650" y="72" class="h">Eval harness (Python)</text>
+  <text x="646" y="96" class="l">the part that produces the result:</text>
+  <text x="646" y="116" class="l">- runs plain-loop baselines</text>
+  <text x="646" y="136" class="l">- runs the same tasks as a graph</text>
+  <text x="646" y="156" class="l">- compares them, makes the charts</text>
+  <text x="646" y="184" class="s">this is the project's headline,</text>
+  <text x="646" y="200" class="s">not the plumbing</text>
+
+  <!-- arrows -->
+  <line x1="460" y1="82"  x2="460" y2="100" class="edge" marker-end="url(#ara)"/>
+  <line x1="460" y1="150" x2="460" y2="168" class="edge" marker-end="url(#ara)"/>
+  <line x1="460" y1="218" x2="460" y2="256" class="edge" marker-end="url(#ara)"/><text x="468" y="240" class="s">frozen graph</text>
+  <!-- runtime <-> runners -->
+  <line x1="330" y1="320" x2="292" y2="320" class="edge" marker-end="url(#ara)"/>
+  <line x1="292" y1="342" x2="330" y2="342" class="edge" marker-end="url(#ara)"/>
+  <text x="300" y="312" class="s">run step</text>
+  <!-- runtime -> persistence -->
+  <line x1="590" y1="320" x2="628" y2="320" class="edge" marker-end="url(#ara)"/><text x="592" y="312" class="s">log it</text>
+  <!-- runtime <-> recovery -->
+  <line x1="445" y1="406" x2="445" y2="446" class="edge" marker-end="url(#ara)"/>
+  <line x1="475" y1="446" x2="475" y2="406" class="edge" marker-end="url(#ara)"/>
+  <text x="486" y="430" class="s">fix &amp; resume</text>
+  <!-- eval -> runtime (dashed) -->
+  <path d="M 700,218 C 690,236 640,250 590,288" class="edge" stroke-dasharray="5 4" marker-end="url(#ara)"/>
+  <text x="612" y="238" class="s">drives runs</text>
+</svg>

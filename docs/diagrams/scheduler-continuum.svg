@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 360" font-family="ui-sans-serif, -apple-system, Segoe UI, Roboto, sans-serif">
+  <defs>
+    <marker id="ar2" markerWidth="12" markerHeight="12" refX="9" refY="3.5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L9,3.5 L0,7 z" fill="#6B7280"/>
+    </marker>
+  </defs>
+  <style>
+    .t{font-size:20px;font-weight:700;fill:#111827}
+    .h{font-size:13.5px;font-weight:700;fill:#111827}
+    .l{font-size:12px;fill:#374151}
+    .s{font-size:11px;fill:#6B7280}
+  </style>
+
+  <text x="40" y="34" class="t">Every agent system is a scheduler - they differ on two dials</text>
+  <text x="40" y="56" class="s">Left to right: more can run at once, and the "who runs next" decision gets more predictable.</text>
+
+  <!-- 5 stages -->
+  <!-- box helper sizes: w=160 h=92, y=90 -->
+  <g>
+    <rect x="34"  y="90" width="160" height="96" rx="10" fill="#FEF2F2" stroke="#DC2626" stroke-width="1.5"/>
+    <text x="48" y="112" class="h">Naive loop</text>
+    <text x="48" y="134" class="l">1 step at a time</text>
+    <text x="48" y="152" class="s">|U| = 1</text>
+    <text x="48" y="170" class="s">next step = LLM guess</text>
+
+    <rect x="226" y="90" width="160" height="96" rx="10" fill="#FEF2F2" stroke="#DC2626" stroke-width="1.5"/>
+    <text x="240" y="112" class="h">Parallel loop</text>
+    <text x="240" y="134" class="l">a few parallel calls</text>
+    <text x="240" y="152" class="s">|U| &#8805; 1</text>
+    <text x="240" y="170" class="s">but LLM still decides</text>
+
+    <rect x="418" y="90" width="160" height="96" rx="10" fill="#FFF7ED" stroke="#EA580C" stroke-width="1.5"/>
+    <text x="432" y="112" class="h">Planner loop</text>
+    <text x="432" y="134" class="l">plan, then 1 at a time</text>
+    <text x="432" y="152" class="s">|U| = 1</text>
+    <text x="432" y="170" class="s">a plan does NOT add</text>
+
+    <rect x="610" y="90" width="160" height="96" rx="10" fill="#FFF7ED" stroke="#EA580C" stroke-width="1.5"/>
+    <text x="624" y="112" class="h">Structured loop</text>
+    <text x="624" y="134" class="l">scripted steps</text>
+    <text x="624" y="152" class="s">|U| = 1</text>
+    <text x="624" y="170" class="s">semi-predictable</text>
+
+    <rect x="802" y="90" width="158" height="96" rx="10" fill="#ECFDF5" stroke="#059669" stroke-width="2"/>
+    <text x="816" y="112" class="h">Graph harness</text>
+    <text x="816" y="134" class="l">many at once</text>
+    <text x="816" y="152" class="s">|U| &#8805; 1</text>
+    <text x="816" y="170" class="s">fully deterministic</text>
+  </g>
+
+  <!-- arrows between -->
+  <line x1="196" y1="138" x2="224" y2="138" stroke="#6B7280" stroke-width="1.6" marker-end="url(#ar2)"/>
+  <line x1="388" y1="138" x2="416" y2="138" stroke="#6B7280" stroke-width="1.6" marker-end="url(#ar2)"/>
+  <line x1="580" y1="138" x2="608" y2="138" stroke="#6B7280" stroke-width="1.6" marker-end="url(#ar2)"/>
+  <line x1="772" y1="138" x2="800" y2="138" stroke="#6B7280" stroke-width="1.6" marker-end="url(#ar2)"/>
+
+  <!-- the two axes -->
+  <line x1="40" y1="232" x2="920" y2="232" stroke="#9CA3AF" stroke-width="1.5" marker-end="url(#ar2)"/>
+  <text x="40" y="252" class="s">how many can run at once (|U|): one  --------------------------------------------------------&gt;  many</text>
+  <line x1="40" y1="280" x2="920" y2="280" stroke="#9CA3AF" stroke-width="1.5" marker-end="url(#ar2)"/>
+  <text x="40" y="300" class="s">how the "next" decision is made: opaque LLM guess  --------------------------&gt;  deterministic, inspectable</text>
+
+  <text x="40" y="340" class="l" fill="#059669">Key trap: adding a planner to a loop does NOT let more run at once. Only a real graph reaches the green corner.</text>
+</svg>

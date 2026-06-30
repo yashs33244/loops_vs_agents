@@ -98,6 +98,8 @@ Naive Loop  ->  Parallel Loop  ->  Planner Loop  ->  Structured Loop  ->  GRAPH 
 non-det         non-det              non-det            semi-det               DETERMINISTIC
 ```
 
+![The scheduler continuum: two dials - how many run at once, and how predictable the next-step decision is](docs/diagrams/scheduler-continuum.svg)
+
 Key insight that trips people up: **adding a planner to a loop does NOT move you right on the cardinality axis.** A "plan-then-execute" loop still runs one step at a time (`|U|=1`). Only a real graph executor reaches the multi-ready-unit, deterministic corner. That corner is Graph Harness.
 
 ---
@@ -105,6 +107,10 @@ Key insight that trips people up: **adding a planner to a loop does NOT move you
 ## 5. The proposal: Graph Harness (SGH)
 
 "Lift the control structure out of the implicit context and into an explicit static DAG."
+
+The whole idea in one picture - the same task as a loop (left) and as a graph (right):
+
+![The same task as a loop vs a graph](docs/diagrams/loop-vs-graph.svg)
 
 Three hard commitments define it:
 
@@ -128,6 +134,10 @@ Round 6  ready={report}                         |U|=1
 ```
 
 Same task, but parallelism is now a **structural property of the graph**, not a lucky LLM decision. And "try patch A or B, whichever works" is a first-class graph construct (`any_of`), not an ad-hoc reaction to failure.
+
+Drawn as a graph, the parallel "waves" (green) are obvious - this is the exact DAG our eval runs:
+
+![The bug-fix task as a graph, with parallel waves highlighted](docs/diagrams/bugfix-dag.svg)
 
 ---
 
@@ -168,6 +178,8 @@ Recovery Layer  -> diagnoses failures, picks a recovery action; sends it back to
                    (and can request a full replan from the planner)
 ```
 
+![Three layers - planner, runtime, recovery - with the two sealed context notebooks](docs/diagrams/three-layer.svg)
+
 Plus **context separation (Def 5.3)**: two disjoint contexts.
 - `C_exec` (execution context): inputs, artifacts, runtime state - visible to nodes while running.
 - `C_diag` (diagnostic context): failure history, prior plan versions - visible ONLY to recovery/planner.
@@ -183,6 +195,8 @@ states = {pending, ready, running, waiting_human, blocked,
 terminal = {executed, failed, cancelled, skipped}   (absorbing - once here, never leave)
 ```
 
+![The per-node state machine: happy path on top, recoverable/waiting states below, final states shaded](docs/diagrams/node-fsm.svg)
+
 Key transitions: `running -> failed_retryable` on transient errors (timeout, rate limit - worth retrying); `running -> failed` on structural errors (missing dependency, invalid plan - retrying won't help). The full transition table is Appendix A.1 (Table 15) - basically your implementation checklist.
 
 The paper proves two things about this FSM:
@@ -196,6 +210,8 @@ The paper proves two things about this FSM:
 | 1 | `local_retry` | transient error (network, timeout) | this node only, plan unchanged |
 | 2 | `local_patch` | contract violation, auth error | reconfigure this node, plan unchanged |
 | 3 | `request_replan` | missing dependency, invalid plan structure | mint a whole new plan version |
+
+![The recovery ladder: retry, then patch, then replan - never skip a rung](docs/diagrams/recovery-ladder.svg)
 
 **Escalation invariant (Prop 6.4):** you must exhaust level `i` before level `i+1`. Enforced mechanically by a per-node counter `recovery_state in {pristine, retried, patched}`: `attempt_patch` is rejected unless state >= retried; `request_replan` is rejected unless all failed nodes are >= patched. This is what kills the "infinite replan" pathology. (Very much like a circuit breaker with staged escalation.)
 

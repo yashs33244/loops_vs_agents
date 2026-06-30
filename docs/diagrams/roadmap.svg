@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 360" font-family="ui-sans-serif, -apple-system, Segoe UI, Roboto, sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L7,3 L0,6 z" fill="#9CA3AF"/>
+    </marker>
+  </defs>
+  <style>
+    .t{font-size:19px;font-weight:700;fill:#111827}
+    .band{font-size:13px;font-weight:700;fill:#374151}
+    .p{font-size:11px;fill:#111827}
+    .s{font-size:10.5px;fill:#6B7280}
+    .edge{stroke:#9CA3AF;stroke-width:1.4;fill:none}
+  </style>
+
+  <text x="30" y="30" class="t">Where we are, and what's left</text>
+  <text x="30" y="50" class="s">green = done &#183; blue outline = doing next &#183; grey = later</text>
+
+  <!-- v1 band -->
+  <text x="30" y="92" class="band">v1 - the public, finishable core (ship this, then make the repo public)</text>
+
+  <!-- you are here marker -->
+  <text x="266" y="116" class="s" fill="#4F46E5" font-weight="700" text-anchor="middle">&#9660; you are here</text>
+
+  <!-- pills v1 -->
+  <g>
+    <rect x="30"  y="124" width="100" height="48" rx="10" fill="#ECFDF5" stroke="#059669" stroke-width="1.8"/><text x="80"  y="146" class="p" text-anchor="middle">CLI spike</text><text x="80"  y="162" class="s" text-anchor="middle">done &#10003;</text>
+    <rect x="148" y="124" width="100" height="48" rx="10" fill="#ECFDF5" stroke="#059669" stroke-width="1.8"/><text x="198" y="146" class="p" text-anchor="middle">M0 data model</text><text x="198" y="162" class="s" text-anchor="middle">done &#10003;</text>
+    <rect x="266" y="124" width="100" height="48" rx="10" fill="#EEF2FF" stroke="#4F46E5" stroke-width="2.4"/><text x="316" y="146" class="p" text-anchor="middle">M1 validator</text><text x="316" y="162" class="s" text-anchor="middle">next</text>
+    <rect x="384" y="124" width="100" height="48" rx="10" fill="#F3F4F6" stroke="#9CA3AF" stroke-width="1.4"/><text x="434" y="146" class="p" text-anchor="middle">M2 runtime</text><text x="434" y="162" class="s" text-anchor="middle">mock nodes</text>
+    <rect x="502" y="124" width="100" height="48" rx="10" fill="#F3F4F6" stroke="#9CA3AF" stroke-width="1.4"/><text x="552" y="146" class="p" text-anchor="middle">M3 parallel</text><text x="552" y="162" class="s" text-anchor="middle">joins</text>
+    <rect x="620" y="124" width="100" height="48" rx="10" fill="#F3F4F6" stroke="#9CA3AF" stroke-width="1.4"/><text x="670" y="146" class="p" text-anchor="middle">eval setup</text><text x="670" y="162" class="s" text-anchor="middle">tasks + rules</text>
+    <rect x="738" y="124" width="100" height="48" rx="10" fill="#F3F4F6" stroke="#9CA3AF" stroke-width="1.4"/><text x="788" y="146" class="p" text-anchor="middle">real provider</text><text x="788" y="162" class="s" text-anchor="middle">wire it in</text>
+    <rect x="856" y="124" width="110" height="48" rx="10" fill="#F3F4F6" stroke="#9CA3AF" stroke-width="1.4"/><text x="911" y="143" class="p" text-anchor="middle">eval + writeup</text><text x="911" y="161" class="s" text-anchor="middle">-&gt; go PUBLIC</text>
+  </g>
+  <!-- connectors v1 -->
+  <line x1="130" y1="148" x2="148" y2="148" class="edge" marker-end="url(#arr)"/>
+  <line x1="248" y1="148" x2="266" y2="148" class="edge" marker-end="url(#arr)"/>
+  <line x1="366" y1="148" x2="384" y2="148" class="edge" marker-end="url(#arr)"/>
+  <line x1="484" y1="148" x2="502" y2="148" class="edge" marker-end="url(#arr)"/>
+  <line x1="602" y1="148" x2="620" y2="148" class="edge" marker-end="url(#arr)"/>
+  <line x1="720" y1="148" x2="738" y2="148" class="edge" marker-end="url(#arr)"/>
+  <line x1="838" y1="148" x2="856" y2="148" class="edge" marker-end="url(#arr)"/>
+
+  <text x="30" y="200" class="s">Note: an early eval against gemini-3.1-flash-lite is already done (the latency/token charts) - a preview of the "eval + writeup" step.</text>
+
+  <!-- v2 band -->
+  <text x="30" y="244" class="band">v2 - deeper systems (open-ended; only after v1 ships)</text>
+  <g>
+    <rect x="30"  y="262" width="120" height="48" rx="10" fill="#F3F4F6" stroke="#9CA3AF" stroke-width="1.4"/><text x="90"  y="284" class="p" text-anchor="middle">M4 recovery</text><text x="90"  y="300" class="s" text-anchor="middle">retry/patch/replan</text>
+    <rect x="168" y="262" width="120" height="48" rx="10" fill="#F3F4F6" stroke="#9CA3AF" stroke-width="1.4"/><text x="228" y="284" class="p" text-anchor="middle">M5 persistence</text><text x="228" y="300" class="s" text-anchor="middle">crash-safe log</text>
+    <rect x="306" y="262" width="140" height="48" rx="10" fill="#F3F4F6" stroke="#9CA3AF" stroke-width="1.4"/><text x="376" y="284" class="p" text-anchor="middle">M6 planner + sweep</text><text x="376" y="300" class="s" text-anchor="middle">Claude vs Gemini</text>
+    <rect x="464" y="262" width="120" height="48" rx="10" fill="#F3F4F6" stroke="#9CA3AF" stroke-width="1.4"/><text x="524" y="284" class="p" text-anchor="middle">M7 API</text><text x="524" y="300" class="s" text-anchor="middle">HTTP + live stream</text>
+    <rect x="602" y="262" width="140" height="48" rx="10" fill="#F3F4F6" stroke="#9CA3AF" stroke-width="1.4"/><text x="672" y="284" class="p" text-anchor="middle">M8 full ablation</text><text x="672" y="300" class="s" text-anchor="middle">all 7 groups, 50 tasks</text>
+  </g>
+
+  <text x="30" y="348" class="s">v1 proves the idea with the smallest honest experiment. v2 turns it into the full distributed-systems showcase.</text>
+</svg>
