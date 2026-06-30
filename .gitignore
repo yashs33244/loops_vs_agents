@@ -1,0 +1,14 @@
+# macOS
+.DS_Store
+
+# Go build artifacts
+/spike/spike
+/engine/bin/
+*.test
+*.out
+
+# Python (v2 eval harness)
+__pycache__/
+*.pyc
+.venv/
+venv/
