@@ -1,15 +1,99 @@
 {
-  "id": "bugfix-placeholder",
+  "id": "bugfix",
   "version": 1,
   "nodes": [
     {
-      "id": "root",
-      "action_ref": "mock",
+      "id": "search_auth",
+      "action_ref": "search.codebase",
+      "join": "all_of",
+      "side_effect": "read",
+      "retry_budget": 2,
+      "timeout_ms": 0
+    },
+    {
+      "id": "search_utils",
+      "action_ref": "search.codebase",
+      "join": "all_of",
+      "side_effect": "read",
+      "retry_budget": 2,
+      "timeout_ms": 0
+    },
+    {
+      "id": "read_auth",
+      "action_ref": "read.file",
+      "join": "all_of",
+      "side_effect": "read",
+      "retry_budget": 2,
+      "timeout_ms": 0
+    },
+    {
+      "id": "read_utils",
+      "action_ref": "read.file",
+      "join": "all_of",
+      "side_effect": "read",
+      "retry_budget": 2,
+      "timeout_ms": 0
+    },
+    {
+      "id": "analyze",
+      "action_ref": "analyze.rootcause",
+      "join": "all_of",
+      "side_effect": "none",
+      "retry_budget": 1,
+      "timeout_ms": 0
+    },
+    {
+      "id": "fix_A",
+      "action_ref": "patch.apply",
+      "join": "all_of",
+      "side_effect": "write",
+      "retry_budget": 1,
+      "timeout_ms": 0
+    },
+    {
+      "id": "fix_B",
+      "action_ref": "patch.apply",
+      "join": "all_of",
+      "side_effect": "write",
+      "retry_budget": 1,
+      "timeout_ms": 0
+    },
+    {
+      "id": "update_docs",
+      "action_ref": "docs.update",
+      "join": "all_of",
+      "side_effect": "write",
+      "retry_budget": 1,
+      "timeout_ms": 0
+    },
+    {
+      "id": "run_tests",
+      "action_ref": "tests.run",
+      "join": "any_of",
+      "side_effect": "read",
+      "retry_budget": 1,
+      "timeout_ms": 0
+    },
+    {
+      "id": "report",
+      "action_ref": "report.generate",
       "join": "all_of",
       "side_effect": "none",
       "retry_budget": 0,
       "timeout_ms": 0
     }
   ],
-  "edges": []
+  "edges": [
+    { "from": "search_auth", "to": "read_auth" },
+    { "from": "search_utils", "to": "read_utils" },
+    { "from": "read_auth", "to": "analyze" },
+    { "from": "read_utils", "to": "analyze" },
+    { "from": "analyze", "to": "fix_A" },
+    { "from": "analyze", "to": "fix_B" },
+    { "from": "analyze", "to": "update_docs" },
+    { "from": "fix_A", "to": "run_tests" },
+    { "from": "fix_B", "to": "run_tests" },
+    { "from": "run_tests", "to": "report" },
+    { "from": "update_docs", "to": "report" }
+  ]
 }
