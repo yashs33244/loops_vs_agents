@@ -1,0 +1,35 @@
+{
+  "model": "claude (general-purpose sub-agents)",
+  "task": "outreach-proj production hardening + bugfix (baseline 7 failed/18 passed -> goal 25 passed)",
+  "verify": "deterministic pytest",
+  "loop": {
+    "agents": 1,
+    "tokens": 48364,
+    "tool_uses": 22,
+    "wall_s": 152.6,
+    "iterations": 3,
+    "result": "25/25 passed",
+    "correct": true,
+    "diff": "+36/-10",
+    "diff_lines": 46,
+    "files_changed": 5
+  },
+  "graph": {
+    "agents": 3,
+    "tokens": 103453,
+    "tool_uses": 29,
+    "wall_parallel_s": 116.8,
+    "wall_sequential_equiv_s": 245.2,
+    "result": "25/25 passed",
+    "correct": true,
+    "diff": "+42/-11",
+    "diff_lines": 53,
+    "files_changed": 5,
+    "nodes": [
+      {"name": "validation", "files": ["app/schemas/chat.py"], "tokens": 28232, "wall_s": 64.0},
+      {"name": "pagination", "files": ["app/api/v1/campaigns.py", "app/repositories/campaign_repository.py"], "tokens": 32543, "wall_s": 64.4},
+      {"name": "chat_correctness", "files": ["app/api/v1/chat.py", "app/services/chat_service.py"], "tokens": 42678, "wall_s": 116.8}
+    ]
+  },
+  "notes": "Graph planner step not separately measured (decomposition provided); deterministic pytest is the verify (no LLM verify node). Both arms reached 25/25. Graph cost ~2.1x tokens but finished ~24% faster in wall-clock via parallelism - the crossover the tiny 2-bug pilot did not reach."
+}
