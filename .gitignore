@@ -17,3 +17,21 @@ venv/
 # (separate nested repo; we keep only the artifacts: runs/, plots/, diagrams/, *.md, *.py)
 experiments/outreach-bugfix/baseline/
 experiments/outreach-bugfix/arms/
+experiments/outreach-bugfix/hardening/
+
+# never commit real secrets (defense in depth; the vendored app copies above carry .env keys)
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+
+# third-party paper PDF: reference the arXiv link instead of redistributing
+paper/*.pdf
+
+# LaTeX build artifacts
+*.aux
+*.log
+*.fls
+*.fdb_latexmk
+*.synctex.gz
