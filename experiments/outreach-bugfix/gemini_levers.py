@@ -60,6 +60,9 @@ TARGETS = [
 ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent?key={k}"
 FIX_SCHEMA = {"type": "OBJECT", "properties": {"content": {"type": "STRING"}}, "required": ["content"]}
 VERIFY_SCHEMA = {"type": "OBJECT", "properties": {"ok": {"type": "BOOLEAN"}, "notes": {"type": "STRING"}}, "required": ["ok", "notes"]}
+FIX_EDITS_SCHEMA = {"type": "OBJECT", "properties": {"edits": {"type": "ARRAY", "items": {
+    "type": "OBJECT", "properties": {"old": {"type": "STRING"}, "new": {"type": "STRING"}},
+    "required": ["old", "new"]}}}, "required": ["edits"]}
 
 
 def gem(prompt, schema, max_retries=4):
@@ -111,27 +114,51 @@ def run_pytest(workdir):
     return failed, passed
 
 
+def _scoped_tests(test_text, target):
+    blocks = [b for b in re.split(r"\n\n\n+", test_text) if any(f"def {t}(" in b for t in target["tests"])]
+    return "\n\n".join(blocks) if blocks else test_text
+
+
 def fix_node(workdir, target, mode, shared_block):
-    """Run one fix node; write the corrected file; return token tuple."""
+    """Run one fix node; edit the file in place; return (in, out, total) tokens.
+
+    naive     - full repo context, model returns the whole rewritten file.
+    optimized - scoped context (file + its tests + cheatsheet), whole-file rewrite.
+    balanced  - SAME scoped context as optimized, but TARGETED edits (no whole-file rewrite),
+                so the model cannot silently drop the parts it was not shown.
+    """
     path = target["path"]
     file_text = read(os.path.join(workdir, path))
     test_text = read(os.path.join(workdir, "tests", "test_hardening.py"))
+
     if mode == "naive":
-        ctx = (f"{shared_block}\n\n"
-               f"Now fix the file `{path}` so its hardening tests pass. "
-               f"Return the COMPLETE corrected file content (not a diff).\n\n"
-               f"=== {path} ===\n{file_text}")
-    else:  # optimized: scoped
-        only_tests = "\n\n".join(
-            blk for blk in re.split(r"\n\n\n+", test_text)
-            for t in target["tests"] if f"def {t}(" in blk
-        ) or test_text
-        ctx = (f"Fix the file `{path}` so these tests pass. Return the COMPLETE corrected file "
-               f"content (not a diff).\n\nNotes: {target['cheatsheet']}\n\n"
-               f"=== {path} ===\n{file_text}\n\n=== the tests to satisfy ===\n{only_tests}")
-    res, pin, pout, ptot = gem(ctx, FIX_SCHEMA)
+        ctx = (f"{shared_block}\n\nNow fix the file `{path}` so its hardening tests pass. "
+               f"Return the COMPLETE corrected file content (not a diff).\n\n=== {path} ===\n{file_text}")
+        res, pin, pout, ptot = gem(ctx, FIX_SCHEMA)
+        new_text = res["content"]
+    else:
+        scoped = (f"File `{path}`:\n{file_text}\n\nTests to satisfy:\n{_scoped_tests(test_text, target)}\n\n"
+                  f"Notes: {target['cheatsheet']}")
+        if mode == "optimized":
+            res, pin, pout, ptot = gem(
+                scoped + f"\n\nFix `{path}`. Return the COMPLETE corrected file content (not a diff).", FIX_SCHEMA)
+            new_text = res["content"]
+        else:  # balanced
+            res, pin, pout, ptot = gem(
+                scoped + "\n\nReturn the SMALLEST set of edits that make the tests pass, as a list of "
+                "{old, new} where `old` is an EXACT substring currently in the file. Do NOT rewrite the "
+                "whole file and do NOT include unchanged regions.", FIX_EDITS_SCHEMA)
+            new_text, misses = file_text, 0
+            for e in res.get("edits", []):
+                if e.get("old") and e["old"] in new_text:
+                    new_text = new_text.replace(e["old"], e["new"], 1)
+                else:
+                    misses += 1
+            if misses:
+                print(f"    ! {misses} edit(s) did not match verbatim in {path}")
+
     with open(os.path.join(workdir, path), "w", encoding="utf-8") as f:
-        f.write(res["content"])
+        f.write(new_text)
     time.sleep(INTERVAL)
     return pin, pout, ptot
 
@@ -166,8 +193,8 @@ def run_arm(mode):
         time.sleep(INTERVAL)
 
     wall = time.time() - t_start
-    f1, p1 = run_pytest(workdir)  # deterministic ground truth for BOTH arms
-    print(f"  end:   {f1} failed, {p1} passed   (verify = {'pytest' if mode=='optimized' else 'LLM node + pytest check'})")
+    f1, p1 = run_pytest(workdir)  # deterministic ground truth for ALL arms
+    print(f"  end:   {f1} failed, {p1} passed   (verify = {'LLM node + pytest check' if mode=='naive' else 'pytest'})")
     shutil.rmtree(workdir, ignore_errors=True)
 
     return {
@@ -184,38 +211,41 @@ def run_arm(mode):
     }
 
 
-def plot(naive, opt):
+def plot(arms):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     os.makedirs(PLOTS, exist_ok=True)
-    fig, ax = plt.subplots(1, 4, figsize=(18, 4.6))
-    fig.suptitle(f"Naive vs optimized graph - same task, {MODEL}  (cost is not the only axis)", fontweight="bold")
-    arms = ["naive", "optimized"]
-    colors = ["#EA580C", "#059669"]
+    order = ["naive", "optimized", "balanced"]
+    labels = ["naive\n(full ctx +\nLLM verify)", "over-scoped\n(file only,\nrewrite)", "balanced\n(scoped +\ntargeted edits)"]
+    A = [arms[m] for m in order]
+    base = A[0]["total_tokens"]
+    x = list(range(len(order)))
+    cost_colors = ["#4C78A8", "#4C78A8", "#4C78A8"]  # neutral: cheaper is not automatically better
+    fig, ax = plt.subplots(1, 4, figsize=(18, 5))
+    fig.suptitle(f"Cheaper is not better if it's wrong - {MODEL} (3 ways to fix the same task)", fontweight="bold")
 
-    tot = [naive["total_tokens"], opt["total_tokens"]]
-    ax[0].bar(arms, tot, color=colors)
+    tot = [a["total_tokens"] for a in A]
+    ax[0].bar(x, tot, color=cost_colors)
     ax[0].set(title="Total tokens (lower = cheaper)", ylabel="tokens")
     for i, v in enumerate(tot):
-        ax[0].text(i, v, f"{v:,}", ha="center", va="bottom")
-    if tot[0]:
-        ax[0].text(1, tot[1], f"  -{100*(1-tot[1]/tot[0]):.0f}%", ha="left", va="center", color="#059669", fontweight="bold")
+        lbl = f"{v:,}" if (i == 0 or not base) else f"{v:,}\n-{100*(1-v/base):.0f}%"
+        ax[0].text(i, v, lbl, ha="center", va="bottom", fontsize=9)
 
-    wall = [naive["wall_s"], opt["wall_s"]]
-    ax[1].bar(arms, wall, color=colors)
+    wall = [a["wall_s"] for a in A]
+    ax[1].bar(x, wall, color=cost_colors)
     ax[1].set(title="LLM wall-clock (s)", ylabel="seconds")
     for i, v in enumerate(wall):
         ax[1].text(i, v, f"{v}s", ha="center", va="bottom")
 
-    calls = [naive["llm_calls"], opt["llm_calls"]]
-    ax[2].bar(arms, calls, color=colors)
+    calls = [a["llm_calls"] for a in A]
+    ax[2].bar(x, calls, color=cost_colors)
     ax[2].set(title="LLM calls", ylabel="count")
     for i, v in enumerate(calls):
         ax[2].text(i, v, str(v), ha="center", va="bottom")
 
-    fixed = [naive["hardening_fixed"], opt["hardening_fixed"]]
-    bars = ax[3].bar(arms, fixed, color=["#EA580C", "#DC2626"])
+    fixed = [a["hardening_fixed"] for a in A]
+    ax[3].bar(x, fixed, color=["#059669" if f >= 5 else "#DC2626" for f in fixed])
     ax[3].axhline(5, ls="--", color="grey", lw=1)
     ax[3].set(title="Hardening tests fixed (higher = correct)", ylabel="tests passing (of 5)", ylim=(0, 5.4))
     for i, v in enumerate(fixed):
@@ -223,7 +253,9 @@ def plot(naive, opt):
 
     for a in ax:
         a.grid(axis="y", alpha=0.3)
-    fig.tight_layout(rect=[0, 0, 1, 0.92])
+        a.set_xticks(x)
+        a.set_xticklabels(labels, fontsize=8)
+    fig.tight_layout(rect=[0, 0, 1, 0.93])
     fig.savefig(os.path.join(PLOTS, "gemini_levers.png"), dpi=130)
     fig.savefig(os.path.join(PLOTS, "gemini_levers.svg"))
     plt.close(fig)
@@ -233,26 +265,27 @@ def main():
     if not KEY:
         raise SystemExit("GEMINI_API_KEY not set")
     os.makedirs(RUNS, exist_ok=True)
-    naive = run_arm("naive")
-    opt = run_arm("optimized")
-    metrics = {"model": MODEL, "naive": naive, "optimized": opt,
-               "token_reduction_pct": round(100 * (1 - opt["total_tokens"] / naive["total_tokens"]), 1) if naive["total_tokens"] else None}
+    arms = {m: run_arm(m) for m in ["naive", "optimized", "balanced"]}
+    base = arms["naive"]["total_tokens"]
+    metrics = {
+        "model": MODEL,
+        "arms": arms,
+        "reduction_vs_naive_pct": {m: (round(100 * (1 - arms[m]["total_tokens"] / base), 1) if base else None) for m in arms},
+    }
     with open(os.path.join(RUNS, "gemini_levers.json"), "w") as f:
         json.dump(metrics, f, indent=2)
     try:
-        plot(naive, opt)
-        plotted = True
+        plot(arms)
     except Exception as e:  # noqa: BLE001
-        plotted = False
-        print(f"  (plot skipped: {e} - run plot step with a matplotlib-enabled python)")
+        print(f"  (plot skipped: {e} - run the plot step with a matplotlib-enabled python)")
 
-    print("\n=== SUMMARY (naive -> optimized) ===")
-    print(f"  total tokens : {naive['total_tokens']:,} -> {opt['total_tokens']:,}  ({metrics['token_reduction_pct']}% less)")
-    print(f"  input tokens : {naive['input_tokens']:,} -> {opt['input_tokens']:,}")
-    print(f"  LLM calls    : {naive['llm_calls']} -> {opt['llm_calls']}")
-    print(f"  wall-clock   : {naive['wall_s']}s -> {opt['wall_s']}s")
-    print(f"  pytest       : naive {naive['pytest_end']} | optimized {opt['pytest_end']}  (5 hardening tests targeted)")
-    print(f"\n  wrote runs/gemini_levers.json, plots/gemini_levers.{{png,svg}}")
+    print("\n=== SUMMARY ===")
+    for m in ["naive", "optimized", "balanced"]:
+        a = arms[m]
+        red = metrics["reduction_vs_naive_pct"][m]
+        print(f"  {m:<10} tokens={a['total_tokens']:>7,} ({red}% vs naive)  calls={a['llm_calls']}  "
+              f"wall={a['wall_s']}s  fixed={a['hardening_fixed']}/5  pytest={a['pytest_end']}")
+    print("\n  wrote runs/gemini_levers.json, plots/gemini_levers.{png,svg}")
 
 
 if __name__ == "__main__":
